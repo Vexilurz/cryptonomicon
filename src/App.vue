@@ -46,54 +46,6 @@
               >
                 BTC
               </span>
-              <span
-                class="
-                  inline-flex
-                  items-center
-                  px-2
-                  m-1
-                  rounded-md
-                  text-xs
-                  font-medium
-                  bg-gray-300
-                  text-gray-800
-                  cursor-pointer
-                "
-              >
-                DOGE
-              </span>
-              <span
-                class="
-                  inline-flex
-                  items-center
-                  px-2
-                  m-1
-                  rounded-md
-                  text-xs
-                  font-medium
-                  bg-gray-300
-                  text-gray-800
-                  cursor-pointer
-                "
-              >
-                BCH
-              </span>
-              <span
-                class="
-                  inline-flex
-                  items-center
-                  px-2
-                  m-1
-                  rounded-md
-                  text-xs
-                  font-medium
-                  bg-gray-300
-                  text-gray-800
-                  cursor-pointer
-                "
-              >
-                CHD
-              </span>
             </div>
             <div class="text-sm text-red-600">Такой тикер уже добавлен</div>
           </div>
@@ -305,5 +257,3 @@ export default {
   }
 };
 </script>
-
-<style src="./app.css"></style>
