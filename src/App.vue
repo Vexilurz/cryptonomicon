@@ -11,6 +11,7 @@
               <input
                 v-model="ticker"
                 @keydown.enter="add"
+                @keyup="suggestCoins"
                 type="text"
                 name="wallet"
                 id="wallet"
@@ -31,6 +32,9 @@
               class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap"
             >
               <span
+                v-for="c in suggestedCoins"
+                :key="c"
+                @click="selectSuggestedCoin(c)"
                 class="
                   inline-flex
                   items-center
@@ -44,7 +48,7 @@
                   cursor-pointer
                 "
               >
-                BTC
+                {{ c }}
               </span>
             </div>
             <div class="text-sm text-red-600">Такой тикер уже добавлен</div>
@@ -212,11 +216,49 @@ export default {
       ticker: "",
       tickers: [],
       sel: null,
-      graph: []
+      graph: [],
+      existingCoins: [],
+      suggestedCoins: ["qwe", "asd"]
     };
   },
 
+  mounted: async function () {
+    await this.fetchCoins();
+  },
+
   methods: {
+    async fetchCoins() {
+      const rawCoinsData = await fetch(
+        `https://min-api.cryptocompare.com/data/all/coinlist?summary=true`
+      );
+      const coinsData = await rawCoinsData.json();
+      Object.entries(coinsData.Data).forEach(([, value]) => {
+        this.existingCoins.push({
+          name: value.FullName.toUpperCase(),
+          symbol: value.Symbol.toUpperCase()
+        });
+      });
+    },
+
+    suggestCoins() {
+      const findedValue = this.ticker.toUpperCase();
+      this.suggestedCoins = this.existingCoins
+        .filter((coin) => {
+          return coin.symbol.includes(findedValue); // || coin.name.includes(findedValue)
+        })
+        .sort((a, b) => {
+          return a.symbol.length - b.symbol.length;
+        })
+        .splice(0, 4)
+        .map((item) => {
+          return item.symbol;
+        });
+    },
+
+    selectSuggestedCoin(selectedCoin) {
+      console.log(selectedCoin);
+    },
+
     add() {
       const currentTicker = {
         name: this.ticker,
