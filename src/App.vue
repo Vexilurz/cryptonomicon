@@ -29,11 +29,12 @@
               />
             </div>
             <div
+              v-if="suggestedCoins.length > 0"
               class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap"
             >
               <span
                 v-for="c in suggestedCoins"
-                :key="c"
+                :key="c.symbol"
                 @click="selectSuggestedCoin(c)"
                 class="
                   inline-flex
@@ -48,10 +49,12 @@
                   cursor-pointer
                 "
               >
-                {{ c }}
+                {{ c.symbol }}
               </span>
             </div>
-            <div class="text-sm text-red-600">Такой тикер уже добавлен</div>
+            <div v-if="tickerAlreadyAdded" class="text-sm text-red-600">
+              Такой тикер уже добавлен
+            </div>
           </div>
         </div>
         <button
@@ -218,7 +221,8 @@ export default {
       sel: null,
       graph: [],
       existingCoins: [],
-      suggestedCoins: ["qwe", "asd"]
+      suggestedCoins: [],
+      tickerAlreadyAdded: false
     };
   },
 
@@ -234,13 +238,18 @@ export default {
       const coinsData = await rawCoinsData.json();
       Object.entries(coinsData.Data).forEach(([, value]) => {
         this.existingCoins.push({
-          name: value.FullName.toUpperCase(),
+          name: value.FullName, //.toUpperCase(),
           symbol: value.Symbol.toUpperCase()
         });
       });
     },
 
     suggestCoins() {
+      this.tickerAlreadyAdded = false;
+      if (!this.ticker) {
+        this.suggestedCoins = [];
+        return;
+      }
       const findedValue = this.ticker.toUpperCase();
       this.suggestedCoins = this.existingCoins
         .filter((coin) => {
@@ -249,17 +258,20 @@ export default {
         .sort((a, b) => {
           return a.symbol.length - b.symbol.length;
         })
-        .splice(0, 4)
-        .map((item) => {
-          return item.symbol;
-        });
+        .splice(0, 4);
     },
 
     selectSuggestedCoin(selectedCoin) {
-      console.log(selectedCoin);
+      this.ticker = selectedCoin.symbol;
+      this.add();
     },
 
     add() {
+      if (this.tickers.find((t) => t.name === this.ticker)) {
+        this.tickerAlreadyAdded = true;
+        return;
+      }
+      this.tickerAlreadyAdded = false;
       const currentTicker = {
         name: this.ticker,
         price: "-"
@@ -271,7 +283,7 @@ export default {
         );
         const data = await f.json();
         this.tickers.find((t) => t.name === currentTicker.name).price =
-          data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
+          data.USD > 1 ? data.USD?.toFixed(2) : data.USD?.toPrecision(2);
 
         if (this.sel?.name === currentTicker.name) {
           this.graph.push(data.USD);
