@@ -15,6 +15,7 @@ module.exports = {
       "error",
       {
         printWidth: 80,
+        endOfLine:"auto",
         trailingComma: "none"
       }
     ]
