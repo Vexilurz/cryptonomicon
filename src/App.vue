@@ -290,6 +290,7 @@ export default {
         }
       }, 3000);
       this.ticker = "";
+      this.suggestedCoins = [];
     },
 
     handleDelete(tickerToRemove) {
