@@ -408,7 +408,10 @@ export default {
 
     updateTicker(tickerName, price) {
       const findedTicker = this.tickers.find((t) => t.name === tickerName);
-      if (findedTicker) findedTicker.price = price;
+      if (findedTicker) {
+        if (findedTicker === this.selectedTicker) this.graph.push(price);
+        findedTicker.price = price;
+      }
       // this.tickers
       //   .filter((t) => t.name === tickerName)
       //   .forEach((t) => {
