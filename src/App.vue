@@ -11,6 +11,7 @@
               <input
                 v-model="ticker"
                 @keydown.enter="add"
+                @keyup="suggestCoins"
                 type="text"
                 name="wallet"
                 id="wallet"
@@ -28,9 +29,13 @@
               />
             </div>
             <div
+              v-if="suggestedCoins.length > 0"
               class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap"
             >
               <span
+                v-for="c in suggestedCoins"
+                :key="c.symbol"
+                @click="selectSuggestedCoin(c)"
                 class="
                   inline-flex
                   items-center
@@ -44,10 +49,12 @@
                   cursor-pointer
                 "
               >
-                BTC
+                {{ c.symbol }}
               </span>
             </div>
-            <div class="text-sm text-red-600">Такой тикер уже добавлен</div>
+            <div v-if="tickerAlreadyAdded" class="text-sm text-red-600">
+              Такой тикер уже добавлен
+            </div>
           </div>
         </div>
         <button
@@ -212,12 +219,59 @@ export default {
       ticker: "",
       tickers: [],
       sel: null,
-      graph: []
+      graph: [],
+      existingCoins: [],
+      suggestedCoins: [],
+      tickerAlreadyAdded: false
     };
   },
 
+  mounted: async function () {
+    await this.fetchCoins();
+  },
+
   methods: {
+    async fetchCoins() {
+      const rawCoinsData = await fetch(
+        `https://min-api.cryptocompare.com/data/all/coinlist?summary=true`
+      );
+      const coinsData = await rawCoinsData.json();
+      Object.entries(coinsData.Data).forEach(([, value]) => {
+        this.existingCoins.push({
+          name: value.FullName, //.toUpperCase(),
+          symbol: value.Symbol.toUpperCase()
+        });
+      });
+    },
+
+    suggestCoins() {
+      this.tickerAlreadyAdded = false;
+      if (!this.ticker) {
+        this.suggestedCoins = [];
+        return;
+      }
+      const findedValue = this.ticker.toUpperCase();
+      this.suggestedCoins = this.existingCoins
+        .filter((coin) => {
+          return coin.symbol.includes(findedValue); // || coin.name.includes(findedValue)
+        })
+        .sort((a, b) => {
+          return a.symbol.length - b.symbol.length;
+        })
+        .splice(0, 4);
+    },
+
+    selectSuggestedCoin(selectedCoin) {
+      this.ticker = selectedCoin.symbol;
+      this.add();
+    },
+
     add() {
+      if (this.tickers.find((t) => t.name === this.ticker)) {
+        this.tickerAlreadyAdded = true;
+        return;
+      }
+      this.tickerAlreadyAdded = false;
       const currentTicker = {
         name: this.ticker,
         price: "-"
@@ -229,13 +283,14 @@ export default {
         );
         const data = await f.json();
         this.tickers.find((t) => t.name === currentTicker.name).price =
-          data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
+          data.USD > 1 ? data.USD?.toFixed(2) : data.USD?.toPrecision(2);
 
         if (this.sel?.name === currentTicker.name) {
           this.graph.push(data.USD);
         }
       }, 3000);
       this.ticker = "";
+      this.suggestedCoins = [];
     },
 
     handleDelete(tickerToRemove) {
