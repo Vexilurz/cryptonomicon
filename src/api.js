@@ -7,17 +7,32 @@ const socket = new WebSocket(
 );
 
 const AGGREGATE_INDEX = "5";
+const SUB_ERROR = "500";
+const INVALID_SUB = "INVALID_SUB";
 
 socket.addEventListener("message", (e) => {
   const {
     TYPE: type,
     FROMSYMBOL: currency,
-    PRICE: newPrice
+    PRICE: newPrice,
+    MESSAGE: message,
+    PARAMETER: parameter
   } = JSON.parse(e.data);
-  if (type !== AGGREGATE_INDEX || newPrice === undefined) return;
-  const handlers = tickersHandlers.get(currency) ?? [];
-  handlers.forEach((fn) => fn(newPrice));
+  if (type === SUB_ERROR && message === INVALID_SUB) {
+    const splittedParams = parameter.split("~");
+    doCallbacks(splittedParams[2], "-", false);
+    return;
+  }
+  if (type === AGGREGATE_INDEX && newPrice !== undefined) {
+    doCallbacks(currency, newPrice, true);
+    return;
+  }
 });
+
+function doCallbacks(currency, newPrice, isValid) {
+  const handlers = tickersHandlers.get(currency) ?? [];
+  handlers.forEach((fn) => fn(newPrice, isValid));
+}
 
 function sendToWebSocket(message) {
   const stringifiedMessage = JSON.stringify(message);
@@ -35,18 +50,30 @@ function sendToWebSocket(message) {
   );
 }
 
-function subscribeToTickerOnWs(ticker) {
-  sendToWebSocket({
+function getParameterString(ticker, toTicker = "USD") {
+  return `5~CCCAGG~${ticker}~${toTicker}`;
+}
+
+function getSubAddMessage(ticker) {
+  return {
     action: "SubAdd",
-    subs: [`5~CCCAGG~${ticker}~USD`]
-  });
+    subs: [getParameterString(ticker)]
+  };
+}
+
+function getSubRemoveMessage(ticker) {
+  return {
+    action: "SubRemove",
+    subs: [getParameterString(ticker)]
+  };
+}
+
+function subscribeToTickerOnWs(ticker) {
+  sendToWebSocket(getSubAddMessage(ticker));
 }
 
 function unsubscribeFromTickerOnWs(ticker) {
-  sendToWebSocket({
-    action: "SubRemove",
-    subs: [`5~CCCAGG~${ticker}~USD`]
-  });
+  sendToWebSocket(getSubRemoveMessage(ticker));
 }
 
 export const subscribeToTicker = (ticker, cb) => {

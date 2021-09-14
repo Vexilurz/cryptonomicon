@@ -181,7 +181,12 @@
               cursor-pointer
             "
           >
-            <div class="px-4 py-5 sm:p-6 text-center">
+            <div
+              class="px-4 py-5 sm:p-6 text-center"
+              :class="{
+                'bg-red-100': !t.isValid
+              }"
+            >
               <dt class="text-sm font-medium text-gray-500 truncate">
                 {{ t.name }} - USD
               </dt>
@@ -312,8 +317,8 @@ export default {
     if (tickersData) {
       this.tickers = JSON.parse(tickersData);
       this.tickers.forEach((ticker) => {
-        subscribeToTicker(ticker.name, (newPrice) =>
-          this.updateTicker(ticker.name, newPrice)
+        subscribeToTicker(ticker.name, (newPrice, isValid) =>
+          this.updateTicker(ticker.name, newPrice, isValid)
         );
       });
     }
@@ -406,11 +411,13 @@ export default {
       this.add();
     },
 
-    updateTicker(tickerName, price) {
+    updateTicker(tickerName, price, isValid) {
       const findedTicker = this.tickers.find((t) => t.name === tickerName);
       if (findedTicker) {
-        if (findedTicker === this.selectedTicker) this.graph.push(price);
+        if (findedTicker === this.selectedTicker && price !== "-")
+          this.graph.push(price);
         findedTicker.price = price;
+        findedTicker.isValid = isValid;
       }
     },
 
@@ -429,7 +436,8 @@ export default {
       this.tickerAlreadyAdded = false;
       const currentTicker = {
         name: this.tickerUpperCase,
-        price: "-"
+        price: "-",
+        isValid: true
       };
       this.tickers = [...this.tickers, currentTicker];
 
@@ -437,8 +445,8 @@ export default {
       this.ticker = "";
       this.suggestedCoins = [];
 
-      subscribeToTicker(currentTicker.name, (newPrice) =>
-        this.updateTicker(currentTicker.name, newPrice)
+      subscribeToTicker(currentTicker.name, (newPrice, isValid) =>
+        this.updateTicker(currentTicker.name, newPrice, isValid)
       );
     },
 
