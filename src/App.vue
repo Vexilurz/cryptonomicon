@@ -307,9 +307,6 @@ export default {
         this[key] = windowData[key];
       }
     });
-    // the same:
-    // if (windowData.filter) this.filter = windowData.filter;
-    // if (windowData.page) this.page = windowData.page;
 
     const tickersData = localStorage.getItem("cryptonomicon-list");
     if (tickersData) {
@@ -325,6 +322,8 @@ export default {
   async mounted() {
     await this.fetchCoins();
   },
+
+  /*** COMPUTED ***/
 
   computed: {
     startIndex() {
@@ -370,6 +369,8 @@ export default {
     }
   },
 
+  /*** METHODS ***/
+
   methods: {
     async fetchCoins() {
       const rawCoinsData = await fetch(
@@ -411,26 +412,12 @@ export default {
         if (findedTicker === this.selectedTicker) this.graph.push(price);
         findedTicker.price = price;
       }
-      // this.tickers
-      //   .filter((t) => t.name === tickerName)
-      //   .forEach((t) => {
-      //     t.price = price;
-      //   });
     },
 
     formatPrice(price) {
       const p = parseFloat(price);
       if (!p || price === "-") return price;
       return p > 1 ? p.toFixed(2) : p.toPrecision(2);
-    },
-
-    async updateTickers() {
-      // if (!this.tickers.length) return;
-      // const exchangeData = await loadTickers(this.tickers.map((t) => t.name));
-      // this.tickers.forEach((ticker) => {
-      //   const price = exchangeData[ticker.name.toUpperCase()];
-      //   ticker.price = price ?? "-";
-      // });
     },
 
     add() {
@@ -445,8 +432,6 @@ export default {
         price: "-"
       };
       this.tickers = [...this.tickers, currentTicker];
-
-      // this.updateTickers(currentTicker.name);
 
       this.filter = "";
       this.ticker = "";
@@ -467,6 +452,8 @@ export default {
       this.selectedTicker = ticker;
     }
   },
+
+  /*** WATCH ***/
 
   watch: {
     selectedTicker() {
