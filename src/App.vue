@@ -320,7 +320,6 @@ export default {
         );
       });
     }
-    setInterval(this.updateTickers, 5000);
   },
 
   async mounted() {
