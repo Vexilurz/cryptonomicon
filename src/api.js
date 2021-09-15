@@ -65,8 +65,8 @@ export const subscribeToTicker = (
   ticker,
   toTicker = sequenceOfTransform[0]
 ) => {
-  const subscribers = tickersHandlers.get(ticker) || [];
   const tickerKey = getTickersKey(ticker, toTicker);
+  const subscribers = tickersHandlers.get(tickerKey) || [];
   tickersHandlers.set(tickerKey, [...subscribers, callback]);
   subscribeToTickerOnWs(tickerKey);
 };
@@ -103,36 +103,42 @@ socket.addEventListener("message", (e) => {
 
     const idx = sequenceOfTransform.findIndex((item) => item === toCurrency);
     if (idx !== -1 && idx < sequenceOfTransform.length - 1) {
+      const nextToCurrency = sequenceOfTransform[idx + 1];
       subscribeToTicker(
         (newPrice, isValid) => {
           if (isValid) {
-            console.log(fromCurrency, sequenceOfTransform[idx + 1], newPrice);
-            let currIdx = idx + 1;
-            let price = newPrice;
-            let isCurrValid = true;
-            while (currIdx > 0) {
-              const tickerKey = getTickersKey(
-                sequenceOfTransform[currIdx],
-                sequenceOfTransform[currIdx - 1]
-              );
-              let multPrice = knownTransformsValues.get(tickerKey);
-              console.log(tickerKey, multPrice);
-              if (!multPrice) {
-                multPrice = 0;
-                isCurrValid = false;
-              }
-              price *= multPrice;
-              currIdx--;
-            }
-            doCallbacks(
-              getTickersKey(fromCurrency, sequenceOfTransform[0]),
-              price,
-              isCurrValid
+            knownTransformsValues.set(
+              getTickersKey(fromCurrency, nextToCurrency),
+              newPrice
             );
+
+            // console.log(fromCurrency, sequenceOfTransform[idx + 1], newPrice);
+            // let currIdx = idx + 1;
+            // let price = newPrice;
+            // let isCurrValid = true;
+            // while (currIdx > 0) {
+            //   const tickerKey = getTickersKey(
+            //     sequenceOfTransform[currIdx],
+            //     sequenceOfTransform[currIdx - 1]
+            //   );
+            //   let multPrice = knownTransformsValues.get(tickerKey);
+            //   console.log(tickerKey, multPrice);
+            //   if (!multPrice) {
+            //     multPrice = 0;
+            //     isCurrValid = false;
+            //   }
+            //   price *= multPrice;
+            //   currIdx--;
+            // }
+            // doCallbacks(
+            //   getTickersKey(fromCurrency, sequenceOfTransform[0]),
+            //   price,
+            //   isCurrValid
+            // );
           }
         },
         fromCurrency,
-        sequenceOfTransform[idx + 1]
+        nextToCurrency
       );
     }
 
@@ -140,7 +146,14 @@ socket.addEventListener("message", (e) => {
   }
 
   if (type === AGGREGATE_INDEX && newPrice !== undefined) {
-    doCallbacks(getTickersKey(fromCurrency, toCurrency), newPrice, true);
+    const tickerKey = getTickersKey(fromCurrency, toCurrency);
+    doCallbacks(tickerKey, newPrice, true);
+    if (knownTransformsValues.has(tickerKey)) {
+      const keys = [...knownTransformsValues.keys()];
+      keys.forEach((key) => {
+        console.log(key); // TODO: do price calculates
+      });
+    }
   }
 });
 
