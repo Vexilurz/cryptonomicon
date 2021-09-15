@@ -317,8 +317,10 @@ export default {
     if (tickersData) {
       this.tickers = JSON.parse(tickersData);
       this.tickers.forEach((ticker) => {
-        subscribeToTicker(ticker.name, (newPrice, isValid) =>
-          this.updateTicker(ticker.name, newPrice, isValid)
+        subscribeToTicker(
+          (newPrice, isValid) =>
+            this.updateTicker(ticker.name, newPrice, isValid),
+          ticker.name
         );
       });
     }
@@ -445,8 +447,10 @@ export default {
       this.ticker = "";
       this.suggestedCoins = [];
 
-      subscribeToTicker(currentTicker.name, (newPrice, isValid) =>
-        this.updateTicker(currentTicker.name, newPrice, isValid)
+      subscribeToTicker(
+        (newPrice, isValid) =>
+          this.updateTicker(currentTicker.name, newPrice, isValid),
+        currentTicker.name
       );
     },
 
