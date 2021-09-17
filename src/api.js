@@ -35,7 +35,7 @@ function sendToWebSocket(message) {
   );
 }
 
-function getTickersKey(fromTicker, toTicker) {
+function getTickerKey(fromTicker, toTicker) {
   return `${fromTicker}~${toTicker}`;
 }
 function getParameterString(tickerKey) {
@@ -66,14 +66,14 @@ export const subscribeToTicker = (
   fromTicker,
   toTicker = targetTicker
 ) => {
-  const tickerKey = getTickersKey(fromTicker, toTicker);
+  const tickerKey = getTickerKey(fromTicker, toTicker);
   const subscribers = tickersHandlers.get(tickerKey) || [];
   tickersHandlers.set(tickerKey, [...subscribers, callback]);
   subscribeToTickerOnWs(tickerKey);
 };
 
 export const unsubscribeFromTicker = (fromTicker, toTicker = targetTicker) => {
-  const tickerKey = getTickersKey(fromTicker, toTicker);
+  const tickerKey = getTickerKey(fromTicker, toTicker);
   tickersHandlers.delete(tickerKey);
   unsubscribeFromTickerOnWs(tickerKey);
   // const subscribers = tickersHandlers.get(ticker) || [];
@@ -97,63 +97,69 @@ socket.addEventListener("message", (e) => {
     const splittedParams = parameter.split("~");
     fromCurrency = splittedParams[2];
     toCurrency = splittedParams[3];
-    doCallbacks(getTickersKey(fromCurrency, toCurrency), "-", false);
-
-    if (toCurrency === targetTicker) {
-      subscribeToTicker(
-        (newPrice, isValid) => {
-          if (isValid) {
-            knownTransformsValues.set(
-              getTickersKey(fromCurrency, helperTicker),
-              newPrice
-            );
-          }
-        },
-        fromCurrency,
-        helperTicker
-      );
-    }
-
+    doCallbacks(getTickerKey(fromCurrency, toCurrency), "-", false);
+    if (toCurrency === targetTicker) subscribeToHelperTicker(fromCurrency);
     return;
   }
 
   if (type === AGGREGATE_INDEX && newPrice !== undefined) {
-    const tickerKey = getTickersKey(fromCurrency, toCurrency);
+    const tickerKey = getTickerKey(fromCurrency, toCurrency);
     doCallbacks(tickerKey, newPrice, true);
-    if (knownTransformsValues.has(tickerKey)) {
-      const keys = [...knownTransformsValues.keys()];
-      keys.forEach((key) => {
-        const splittedKey = key.split("~");
-        const from = splittedKey[0];
-        const to = splittedKey[1];
-
-        if (
-          tickerKey === getTickersKey(helperTicker, targetTicker) &&
-          to === helperTicker
-        ) {
-          const price = newPrice * knownTransformsValues.get(key);
-          doCallbacks(getTickersKey(from, targetTicker), price, true);
-        }
-
-        if (toCurrency === helperTicker) {
-          const price =
-            newPrice *
-            knownTransformsValues.get(
-              getTickersKey(helperTicker, targetTicker)
-            );
-          doCallbacks(getTickersKey(fromCurrency, targetTicker), price, true);
-        }
-      });
-    }
+    checkKnownTransformValues(fromCurrency, toCurrency, newPrice);
   }
 });
+
+function subscribeToHelperTicker(fromCurrency) {
+  subscribeToTicker(
+    (newPrice, isValid) => {
+      if (isValid) {
+        knownTransformsValues.set(
+          getTickerKey(fromCurrency, helperTicker),
+          newPrice
+        );
+      }
+    },
+    fromCurrency,
+    helperTicker
+  );
+}
+
+function checkKnownTransformValues(fromCurrency, toCurrency, newPrice) {
+  const tickerKey = getTickerKey(fromCurrency, toCurrency);
+  if (!knownTransformsValues.has(tickerKey)) return;
+  const keys = [...knownTransformsValues.keys()];
+  keys.forEach((key) => {
+    const splittedKey = key.split("~");
+    const from = splittedKey[0];
+    const to = splittedKey[1];
+
+    if (
+      tickerKey === getTickerKey(helperTicker, targetTicker) &&
+      to === helperTicker
+    ) {
+      const calculatedPrice = newPrice * knownTransformsValues.get(key);
+      doCallbacks(getTickerKey(from, targetTicker), calculatedPrice, true);
+    }
+
+    if (toCurrency === helperTicker) {
+      const calculatedPrice =
+        newPrice *
+        knownTransformsValues.get(getTickerKey(helperTicker, targetTicker));
+      doCallbacks(
+        getTickerKey(fromCurrency, targetTicker),
+        calculatedPrice,
+        true
+      );
+    }
+  });
+}
 
 function initKnownTransforms() {
   subscribeToTicker(
     (newPrice, isValid) => {
       if (isValid)
         knownTransformsValues.set(
-          getTickersKey(helperTicker, targetTicker),
+          getTickerKey(helperTicker, targetTicker),
           newPrice
         );
     },
