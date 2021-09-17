@@ -6,7 +6,8 @@ const socket = new WebSocket(
   `wss://streamer.cryptocompare.com/v2?api_key=${API_KEY}`
 );
 
-const sequenceOfTransform = ["USD", "BTC"];
+const targetTicker = "USD";
+const helperTicker = "BTC";
 const knownTransformsValues = new Map(); // tickerKey, price
 
 const AGGREGATE_INDEX = "5";
@@ -34,8 +35,8 @@ function sendToWebSocket(message) {
   );
 }
 
-function getTickersKey(ticker, toTicker) {
-  return `${ticker}~${toTicker}`;
+function getTickersKey(fromTicker, toTicker) {
+  return `${fromTicker}~${toTicker}`;
 }
 function getParameterString(tickerKey) {
   return `5~CCCAGG~${tickerKey}`;
@@ -62,20 +63,17 @@ function unsubscribeFromTickerOnWs(tickerKey) {
 
 export const subscribeToTicker = (
   callback,
-  ticker,
-  toTicker = sequenceOfTransform[0]
+  fromTicker,
+  toTicker = targetTicker
 ) => {
-  const tickerKey = getTickersKey(ticker, toTicker);
+  const tickerKey = getTickersKey(fromTicker, toTicker);
   const subscribers = tickersHandlers.get(tickerKey) || [];
   tickersHandlers.set(tickerKey, [...subscribers, callback]);
   subscribeToTickerOnWs(tickerKey);
 };
 
-export const unsubscribeFromTicker = (
-  ticker,
-  toTicker = sequenceOfTransform[0]
-) => {
-  const tickerKey = getTickersKey(ticker, toTicker);
+export const unsubscribeFromTicker = (fromTicker, toTicker = targetTicker) => {
+  const tickerKey = getTickersKey(fromTicker, toTicker);
   tickersHandlers.delete(tickerKey);
   unsubscribeFromTickerOnWs(tickerKey);
   // const subscribers = tickersHandlers.get(ticker) || [];
@@ -101,44 +99,18 @@ socket.addEventListener("message", (e) => {
     toCurrency = splittedParams[3];
     doCallbacks(getTickersKey(fromCurrency, toCurrency), "-", false);
 
-    const idx = sequenceOfTransform.findIndex((item) => item === toCurrency);
-    if (idx !== -1 && idx < sequenceOfTransform.length - 1) {
-      const nextToCurrency = sequenceOfTransform[idx + 1];
+    if (toCurrency === targetTicker) {
       subscribeToTicker(
         (newPrice, isValid) => {
           if (isValid) {
             knownTransformsValues.set(
-              getTickersKey(fromCurrency, nextToCurrency),
+              getTickersKey(fromCurrency, helperTicker),
               newPrice
             );
-
-            // console.log(fromCurrency, sequenceOfTransform[idx + 1], newPrice);
-            // let currIdx = idx + 1;
-            // let price = newPrice;
-            // let isCurrValid = true;
-            // while (currIdx > 0) {
-            //   const tickerKey = getTickersKey(
-            //     sequenceOfTransform[currIdx],
-            //     sequenceOfTransform[currIdx - 1]
-            //   );
-            //   let multPrice = knownTransformsValues.get(tickerKey);
-            //   console.log(tickerKey, multPrice);
-            //   if (!multPrice) {
-            //     multPrice = 0;
-            //     isCurrValid = false;
-            //   }
-            //   price *= multPrice;
-            //   currIdx--;
-            // }
-            // doCallbacks(
-            //   getTickersKey(fromCurrency, sequenceOfTransform[0]),
-            //   price,
-            //   isCurrValid
-            // );
           }
         },
         fromCurrency,
-        nextToCurrency
+        helperTicker
       );
     }
 
@@ -151,28 +123,43 @@ socket.addEventListener("message", (e) => {
     if (knownTransformsValues.has(tickerKey)) {
       const keys = [...knownTransformsValues.keys()];
       keys.forEach((key) => {
-        console.log(key); // TODO: do price calculates
+        const splittedKey = key.split("~");
+        const from = splittedKey[0];
+        const to = splittedKey[1];
+
+        if (
+          tickerKey === getTickersKey(helperTicker, targetTicker) &&
+          to === helperTicker
+        ) {
+          const price = newPrice * knownTransformsValues.get(key);
+          doCallbacks(getTickersKey(from, targetTicker), price, true);
+        }
+
+        if (toCurrency === helperTicker) {
+          const price =
+            newPrice *
+            knownTransformsValues.get(
+              getTickersKey(helperTicker, targetTicker)
+            );
+          doCallbacks(getTickersKey(fromCurrency, targetTicker), price, true);
+        }
       });
     }
   }
 });
 
 function initKnownTransforms() {
-  for (let i = 0; i < sequenceOfTransform.length - 1; i++) {
-    const fromCurrency = sequenceOfTransform[i + 1];
-    const toCurrency = sequenceOfTransform[i];
-    subscribeToTicker(
-      (newPrice, isValid) => {
-        if (isValid)
-          knownTransformsValues.set(
-            getTickersKey(fromCurrency, toCurrency),
-            newPrice
-          );
-      },
-      fromCurrency,
-      toCurrency
-    );
-  }
+  subscribeToTicker(
+    (newPrice, isValid) => {
+      if (isValid)
+        knownTransformsValues.set(
+          getTickersKey(helperTicker, targetTicker),
+          newPrice
+        );
+    },
+    helperTicker,
+    targetTicker
+  );
 }
 
 initKnownTransforms();
