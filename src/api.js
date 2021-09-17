@@ -6,7 +6,7 @@ const socket = new WebSocket(
   `wss://streamer.cryptocompare.com/v2?api_key=${API_KEY}`
 );
 
-const targetTicker = "USD";
+const targetTicker = "RUB";
 const helperTicker = "BTC";
 const knownTransformsValues = new Map(); // tickerKey, price
 

@@ -188,7 +188,7 @@
               }"
             >
               <dt class="text-sm font-medium text-gray-500 truncate">
-                {{ t.name }} - USD
+                {{ t.name }} - RUB
               </dt>
               <dd class="mt-1 text-3xl font-semibold text-gray-900">
                 {{ formatPrice(t.price) }}
@@ -233,7 +233,7 @@
       </template>
       <section v-if="selectedTicker" class="relative">
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
-          {{ selectedTicker.name }} - USD
+          {{ selectedTicker.name }} - RUB
         </h3>
         <div class="flex items-end border-gray-600 border-b border-l h-64">
           <div
