@@ -1,5 +1,4 @@
-const API_KEY =
-  "dc5b16db1d772499cc70f00f5aaee937b4a0b03f343222d134ca65bc52f1a70a";
+const API_KEY = process.env.VUE_APP_API_KEY;
 
 const tickersHandlers = new Map(); // tickerKey, [cb]
 const socket = new WebSocket(
